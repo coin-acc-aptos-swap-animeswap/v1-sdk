@@ -39,6 +39,14 @@ export type SwapCoinPayload = {
   deadline: BigNumber
 }
 
+export type SwapCoinPriceImpactParams = {
+  coinPair: LiquidityPoolResource
+  coinTypeIn: AptosResourceType
+  inDecimal: BigNumber
+  outDecimal: BigNumber
+  fee: Decimal
+}
+
 const U64MAX: Decimal = d('18446744073709551615') // 2^64-1
 
 export class RouteModule implements IModule {
@@ -365,6 +373,29 @@ export class RouteModule implements IModule {
       type_arguments: typeArguments,
       arguments: args,
     }
+  }
+
+  /**
+   * Get pair price out. Use for get coin price compare to stable coin.
+   * @param param0 
+   * @returns the amount that 1 input coinType can swap to. Already considered the decimal influence
+   */
+  getPairPriceOut({
+    coinPair,
+    coinTypeIn,
+    inDecimal,
+    outDecimal,
+    fee = d(30),
+  }: SwapCoinPriceImpactParams): Decimal {
+    if (!coinPair) throw('Pair null error')
+    let noImpactAmountOut = d(10).pow(d(outDecimal).sub(d(inDecimal)))
+    noImpactAmountOut = noImpactAmountOut.mul(d(10000).sub(fee)).div(10000)
+    if (coinTypeIn == coinPair.coinX) {
+      noImpactAmountOut = noImpactAmountOut.mul(d(coinPair.coinYReserve)).div(d(coinPair.coinXReserve))
+    } else {
+      noImpactAmountOut = noImpactAmountOut.mul(d(coinPair.coinXReserve)).div(d(coinPair.coinYReserve))
+    }
+    return noImpactAmountOut
   }
 }
 
